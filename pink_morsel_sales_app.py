@@ -1,108 +1,56 @@
 import pandas as pd
 from dash import Dash, html, dcc, Input, Output
 import plotly.express as px
+import os
 
-# Path to the formatted data
+# Get absolute path to data file
+current_dir = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(current_dir, "formatted_sales.csv")
+
+# App color scheme
 DATA_PATH = "./formatted_sales.csv"
 COLORS = {
-    "background": "#F0E0FF",
-    "highlight": "#C16BDB",
-    "text": "#3E145F"
+    "primary": "#FEDBFF",
+    "secondary": "#D598EB",
+    "font": "#522A61"
 }
 
-# Load the dataset and sort by date
+# Load the data
 data = pd.read_csv(DATA_PATH)
-data['date'] = pd.to_datetime(data['date'])
 data = data.sort_values(by="date")
 
-# Initialize Dash app
+# Initialize the Dash app
 app = Dash(__name__)
 
-# Function to generate the figure
-def create_figure(filtered_data):
-    fig = px.line(filtered_data, x="date", y="sales", title="Pink Morsel Sales Over Time")
-    fig.update_layout(
-        plot_bgcolor=COLORS["highlight"],
-        paper_bgcolor=COLORS["background"],
-        font_color=COLORS["text"],
-        title={'x': 0.5, 'xanchor': 'center'},
-        xaxis_title="Date",
-        yaxis_title="Sales"
+# Create the figure generation function
+def generate_figure(chart_data):
+    line_chart = px.line(chart_data, x="date", y="sales", title="Pink Morsel Sales")
+    line_chart.update_layout(
+        plot_bgcolor=COLORS["secondary"],
+        paper_bgcolor=COLORS["primary"],
+        font_color=COLORS["font"]
     )
-    return fig
-
-# Create the line chart component
-chart = dcc.Graph(
-    id="sales-chart",
-    figure=create_figure(data)
-)
-
-# Header Section
-header = html.H1(
-    "Pink Morsel Sales Dashboard",
-    id="app-header",
-    style={
-        "background-color": COLORS["highlight"],
-        "color": COLORS["text"],
-        "padding": "15px",
-        "border-radius": "10px"
-    }
-)
-
-# Region selection (radio buttons)
-region_selector = dcc.RadioItems(
-    options=[
-        {"label": "North", "value": "north"},
-        {"label": "East", "value": "east"},
-        {"label": "South", "value": "south"},
-        {"label": "West", "value": "west"},
-        {"label": "All Regions", "value": "all"}
-    ],
-    value="all",
-    id="region-selector",
-    inline=True
-)
-
-# Wrapper for the region selector
-region_selector_wrapper = html.Div(
-    [
-        html.Label("Choose Region:"),
-        region_selector
-    ],
-    style={
-        "font-size": "120%",
-        "margin-top": "20px"
-    }
-)
-
-# Callback to update the chart based on selected region
-@app.callback(
-    Output(chart, "figure"),
-    Input(region_selector, "value")
-)
-def update_chart(region):
-    if region == "all":
-        filtered_data = data
-    else:
-        filtered_data = data[data["region"] == region]
-
-    return create_figure(filtered_data)
+    return line_chart
 
 # Layout of the app
 app.layout = html.Div(
     [
-        header,
-        region_selector_wrapper,
-        chart
+        html.H1("Pink Morsel Visualizer", id="header", style={
+            "background-color": COLORS["secondary"],
+            "color": COLORS["font"],
+            "border-radius": "20px"
+        }),
+        dcc.Graph(id="visualization", figure=generate_figure(data)),
+        dcc.RadioItems(
+            id="region_picker",
+            options=[{"label": region, "value": region} for region in ["north", "east", "south", "west", "all"]],
+            value="north",
+            inline=True
+        )
     ],
     style={
         "textAlign": "center",
-        "background-color": COLORS["background"],
-        "border-radius": "15px",
-        "padding": "20px"
+        "background-color": COLORS["primary"],
+        "border-radius": "20px"
     }
 )
-
-# Run the server
-if __name__ == '__main__':
-    app.run_server(debug=True)
